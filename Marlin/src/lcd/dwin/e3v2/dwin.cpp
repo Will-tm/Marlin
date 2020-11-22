@@ -3440,12 +3440,12 @@ void HMI_Refuel(void){
             return;
           }
         #endif
-        sprintf_P(gcode_string, PSTR("G1 E%.2f"), (HMI_ValueStruct.Move_E_scale/10));
-        gcode.process_subcommands_now_P("G1 F2000");
+        gcode.process_subcommands_now_P("G92 E0");
+        sprintf_P(gcode_string, PSTR("G1 E%.2f F2000"), (HMI_ValueStruct.Move_E_scale/10));
+        gcode.process_subcommands_now_P(PSTR(gcode_string));
         gcode.process_subcommands_now_P("G92 E0");
         gcode.process_subcommands_now_P("G1 E20 F200");
         gcode.process_subcommands_now_P("G92 E0");
-        gcode.process_subcommands_now_P(PSTR(gcode_string ));
         break;
       case 3: //Retreat
         #ifdef PREVENT_COLD_EXTRUSION
@@ -3456,12 +3456,12 @@ void HMI_Refuel(void){
             return;
           }
         #endif
-        gcode.process_subcommands_now_P("G1 E10 F100"); // Extrude a short distance before unloading to avoid blob forming
         gcode.process_subcommands_now_P("G92 E0");
-        sprintf_P(gcode_string, PSTR("G1 E-%.2f"), (HMI_ValueStruct.Move_E_scale/10));
-        gcode.process_subcommands_now_P("G1 F2000");
+        gcode.process_subcommands_now_P("G1 E-10 F100"); // Extrude a short distance before unloading to avoid blob forming
         gcode.process_subcommands_now_P("G92 E0");
-        gcode.process_subcommands_now_P(PSTR(gcode_string ));
+        sprintf_P(gcode_string, PSTR("G1 E-%.2f F2000"), (HMI_ValueStruct.Move_E_scale/10));
+        gcode.process_subcommands_now_P(PSTR(gcode_string));
+        gcode.process_subcommands_now_P("G92 E0");
         break;
     }
   }
