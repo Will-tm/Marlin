@@ -2367,7 +2367,7 @@ void HMI_AudioFeedback(const bool success=true) {
 
 inline void Draw_ZTool_Menu() {
   Clear_Main_Window();
-  Draw_Title("Z Tool [Will]"); // TODO: GET_TEXT_F
+  Draw_Title("Z Tool"); // TODO: GET_TEXT_F
 
 
    #if HAS_BED_PROBE
@@ -2386,12 +2386,12 @@ inline void Draw_ZTool_Menu() {
 
 inline void Draw_Refuel_Menu() {
   Clear_Main_Window();
-  Draw_Title("Refuel [Will]"); // TODO: GET_TEXT_F
+  Draw_Title("Refuel"); // TODO: GET_TEXT_F
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(1), (char*)"Length (mm)");
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(2), (char*)"Feed");
     DWIN_Draw_String(false,false,font8x16,Color_White,Color_Bg_Black, 64, MBASE(3), (char*)"Retract");
     queue.inject_P(PSTR("G92 E0"));
-    HMI_ValueStruct.Move_E_scale = 3000; //Default 300mm feed
+    HMI_ValueStruct.Move_E_scale = 4000; //Default 400mm feed
     DWIN_Draw_Signed_Float(font8x16, Color_Bg_Black, 3, 1, 216, MBASE(1), HMI_ValueStruct.Move_E_scale);
     //DWIN_Frame_AreaCopy(1, 1, 76, 271-165, 479-393, LBLX, MBASE(1)); // "..."
   Draw_Back_First(select_refuel.now == 0);
@@ -2416,7 +2416,7 @@ inline void Draw_AUX_Menu() {
   }
   else {
    #ifdef USE_STRING_HEADINGS
-      Draw_Title("AUX Leveling [Will]"); // TODO: GET_TEXT_F
+      Draw_Title("AUX Leveling"); // TODO: GET_TEXT_F
     #else
       DWIN_Frame_AreaCopy(1, 231, 2, 271-6, 479-467, 14, 8);
     #endif
