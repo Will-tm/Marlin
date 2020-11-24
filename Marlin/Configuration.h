@@ -493,10 +493,9 @@
     #define DEFAULT_Ki_LIST {   1.08,   1.08 }
     #define DEFAULT_Kd_LIST { 114.00, 114.00 }
   #else
-    // Ender 3 v2
-    #define DEFAULT_Kp 31.76
-    #define DEFAULT_Ki 2.94
-    #define DEFAULT_Kd 85.93
+    #define DEFAULT_Kp 28.99
+    #define DEFAULT_Ki 2.72
+    #define DEFAULT_Kd 77.27
   #endif
 #endif // PIDTEMP
 
