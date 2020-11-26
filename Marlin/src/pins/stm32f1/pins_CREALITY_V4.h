@@ -79,7 +79,7 @@
 //
 #define X_STOP_PIN                          PA5
 #define Y_STOP_PIN                          PA6
-#define Z_STOP_PIN                          PA7
+#define Z_STOP_PIN                          PB11
 
 #ifdef Z_MIN_PROBE_PIN
   #undef Z_MIN_PROBE_PIN
