@@ -1332,6 +1332,7 @@ void HMI_Move_Z() {
   void HMI_Zoffset() {
     ENCODER_DiffState encoder_diffState = Encoder_ReceiveAnalyze();
     if (encoder_diffState != ENCODER_DIFF_NO) {
+      last_zoffset = dwin_zoffset;
       uint8_t zoff_line;
       switch (HMI_ValueStruct.show_mode) {
         case -4: zoff_line = PREPARE_CASE_ZOFF + MROWS - index_prepare; break;
@@ -1340,6 +1341,8 @@ void HMI_Move_Z() {
       if (Apply_Encoder(encoder_diffState, HMI_ValueStruct.offset_value)) {
         EncoderRate.enabled = false;
         #if HAS_BED_PROBE
+          TERN_(EEPROM_SETTINGS, settings.save());
+          dwin_zoffset = HMI_ValueStruct.offset_value / 100.0f;
           probe.offset.z = dwin_zoffset;
             #if EITHER(BABYSTEP_ZPROBE_OFFSET, JUST_BABYSTEP)
               if (BABYSTEP_ALLOWED()) babystep.add_mm(Z_AXIS, dwin_zoffset - last_zoffset);
