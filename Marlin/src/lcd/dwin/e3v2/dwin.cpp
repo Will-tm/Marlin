@@ -1341,7 +1341,9 @@ void HMI_Move_Z() {
         EncoderRate.enabled = false;
         #if HAS_BED_PROBE
           probe.offset.z = dwin_zoffset;
-          TERN_(EEPROM_SETTINGS, settings.save());
+            #if EITHER(BABYSTEP_ZPROBE_OFFSET, JUST_BABYSTEP)
+              if (BABYSTEP_ALLOWED()) babystep.add_mm(Z_AXIS, dwin_zoffset - last_zoffset);
+            #endif
         #endif
         checkkey = HMI_ValueStruct.show_mode == -4 ? Prepare : Tune;
         DWIN_Draw_Signed_Float(font8x16, Color_Bg_Black, 2, 2, 202, MBASE(zoff_line), TERN(HAS_BED_PROBE, BABY_Z_VAR * 100, HMI_ValueStruct.offset_value));
@@ -1350,11 +1352,6 @@ void HMI_Move_Z() {
       }
       NOLESS(HMI_ValueStruct.offset_value, (Z_PROBE_OFFSET_RANGE_MIN) * 100);
       NOMORE(HMI_ValueStruct.offset_value, (Z_PROBE_OFFSET_RANGE_MAX) * 100);
-      last_zoffset = dwin_zoffset;
-      dwin_zoffset = HMI_ValueStruct.offset_value / 100.0f;
-      #if EITHER(BABYSTEP_ZPROBE_OFFSET, JUST_BABYSTEP)
-        if (BABYSTEP_ALLOWED()) babystep.add_mm(Z_AXIS, dwin_zoffset - last_zoffset);
-      #endif
       DWIN_Draw_Signed_Float(font8x16, Select_Color, 2, 2, 202, MBASE(zoff_line), HMI_ValueStruct.offset_value);
       DWIN_UpdateLCD();
     }
