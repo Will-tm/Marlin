@@ -38,7 +38,7 @@
 #endif
 
 void host_action(PGM_P const pstr, const bool eol) {
-  PORT_REDIRECT(SERIAL_ALL);
+  PORT_REDIRECT(SerialMask::All);
   SERIAL_ECHOPGM("//action:");
   SERIAL_ECHOPGM_P(pstr);
   if (eol) SERIAL_EOL();
@@ -77,20 +77,28 @@ void host_action(PGM_P const pstr, const bool eol) {
 
   PromptReason host_prompt_reason = PROMPT_NOT_DEFINED;
 
+  #if ENABLED(DWIN_CREALITY_LCD)
+    #include "../lcd/dwin/e3v2/dwin.h"
+  #endif
+
+#include "../libs/buzzer.h"
+
   void host_action_notify(const char * const message) {
-    PORT_REDIRECT(SERIAL_ALL);
+    PORT_REDIRECT(SerialMask::All);
     host_action(PSTR("notification "), false);
     SERIAL_ECHOLN(message);
+    TERN_(DWIN_CREALITY_LCD, Print_Status_Message(const_cast<char*> (message)));
   }
 
   void host_action_notify_P(PGM_P const message) {
-    PORT_REDIRECT(SERIAL_ALL);
+    PORT_REDIRECT(SerialMask::All);
     host_action(PSTR("notification "), false);
     SERIAL_ECHOLNPGM_P(message);
+    TERN_(DWIN_CREALITY_LCD, Print_Status_Message(const_cast<char*> (message)));
   }
 
   void host_action_prompt(PGM_P const ptype, const bool eol=true) {
-    PORT_REDIRECT(SERIAL_ALL);
+    PORT_REDIRECT(SerialMask::All);
     host_action(PSTR("prompt_"), false);
     SERIAL_ECHOPGM_P(ptype);
     if (eol) SERIAL_EOL();
@@ -98,7 +106,7 @@ void host_action(PGM_P const pstr, const bool eol) {
 
   void host_action_prompt_plus(PGM_P const ptype, PGM_P const pstr, const char extra_char='\0') {
     host_action_prompt(ptype, false);
-    PORT_REDIRECT(SERIAL_ALL);
+    PORT_REDIRECT(SerialMask::All);
     SERIAL_CHAR(' ');
     SERIAL_ECHOPGM_P(pstr);
     if (extra_char != '\0') SERIAL_CHAR(extra_char);
@@ -121,10 +129,12 @@ void host_action(PGM_P const pstr, const bool eol) {
   void host_prompt_do(const PromptReason reason, PGM_P const pstr, PGM_P const btn1/*=nullptr*/, PGM_P const btn2/*=nullptr*/) {
     host_action_prompt_begin(reason, pstr);
     _host_prompt_show(btn1, btn2);
+    TERN_(DWIN_CREALITY_LCD, Print_Status_Message(const_cast<char*> (pstr)));
   }
   void host_prompt_do(const PromptReason reason, PGM_P const pstr, const char extra_char, PGM_P const btn1/*=nullptr*/, PGM_P const btn2/*=nullptr*/) {
     host_action_prompt_begin(reason, pstr, extra_char);
     _host_prompt_show(btn1, btn2);
+    TERN_(DWIN_CREALITY_LCD, Print_Status_Message(const_cast<char*> (pstr)));
   }
 
   void filament_load_host_prompt() {
