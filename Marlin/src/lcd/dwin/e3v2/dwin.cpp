@@ -107,25 +107,11 @@
 #define DWIN_FONT_HEAD font10x20
 
 #define MENU_CHAR_LIMIT  24
-#define STATUS_Y 352
-
-// Fan speed limit
-#define FANON           255
-#define FANOFF          0
+#define STATUS_Y        360
 
 // Print speed limit
-#define MAX_PRINT_SPEED   999
-#define MIN_PRINT_SPEED   10
-
-// Temp limits
-#if HAS_HOTEND
-  #define MAX_E_TEMP    (HEATER_0_MAXTEMP - (HOTEND_OVERSHOOT))
-  #define MIN_E_TEMP    HEATER_0_MINTEMP
-#endif
-
-#if HAS_HEATED_BED
-  #define MIN_BED_TEMP  BED_MINTEMP
-#endif
+#define MIN_PRINT_SPEED  10
+#define MAX_PRINT_SPEED 999
 
 // Feedspeed limit (max feedspeed = DEFAULT_MAX_FEEDRATE * 2)
 #define MIN_MAXFEEDSPEED      1
@@ -216,8 +202,12 @@ static uint8_t _card_percent = 0;
 static uint16_t _remain_time = 0;
 
 #if ENABLED(PAUSE_HEAT)
-  TERN_(HAS_HOTEND, uint16_t resume_hotend_temp = 0);
-  TERN_(HAS_HEATED_BED, uint16_t resume_bed_temp = 0);
+  #if ENABLED(HAS_HOTEND)
+    uint16_t resume_hotend_temp = 0;
+  #endif
+  #if ENABLED(HAS_HEATED_BED)
+    uint16_t resume_bed_temp = 0;
+  #endif
 #endif
 
 #if HAS_ZOFFSET_ITEM
@@ -435,7 +425,7 @@ void Draw_Title(const __FlashStringHelper * title) {
 }
 
 void Clear_Menu_Area() {
-  DWIN_Draw_Rectangle(1, Color_Bg_Black, 0, 31, DWIN_WIDTH, STATUS_Y);
+  DWIN_Draw_Rectangle(1, Color_Bg_Black, 0, 31, DWIN_WIDTH, STATUS_Y - 1);
 }
 
 void Clear_Main_Window() {
@@ -964,11 +954,11 @@ void Draw_Tune_Menu() {
 
   #if HAS_HOTEND
     Draw_Menu_Line(TUNE_CASE_TEMP, ICON_HotendTemp);
-    DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Color_Bg_Black, 3, 216, MBASE(TUNE_CASE_TEMP), thermalManager.temp_hotend[0].target);
+    DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Color_Bg_Black, 3, 216, MBASE(TUNE_CASE_TEMP), thermalManager.degTargetHotend(0));
   #endif
   #if HAS_HEATED_BED
     Draw_Menu_Line(TUNE_CASE_BED, ICON_BedTemp);
-    DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Color_Bg_Black, 3, 216, MBASE(TUNE_CASE_BED), thermalManager.temp_bed.target);
+    DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Color_Bg_Black, 3, 216, MBASE(TUNE_CASE_BED), thermalManager.degTargetBed());
   #endif
   #if HAS_FAN
     Draw_Menu_Line(TUNE_CASE_FAN, ICON_FanSpeed);
@@ -1646,7 +1636,7 @@ void HMI_ProbeYOffset(){
         return;
       }
       // E_Temp limit
-      LIMIT(HMI_ValueStruct.E_Temp, MIN_E_TEMP, MAX_E_TEMP);
+      LIMIT(HMI_ValueStruct.E_Temp, HEATER_0_MINTEMP, thermalManager.hotend_max_target(0));
       // E_Temp value
       DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(temp_line), HMI_ValueStruct.E_Temp);
     }
@@ -1689,7 +1679,7 @@ void HMI_ProbeYOffset(){
         return;
       }
       // Bed_Temp limit
-      LIMIT(HMI_ValueStruct.Bed_Temp, MIN_BED_TEMP, BED_MAX_TARGET);
+      LIMIT(HMI_ValueStruct.Bed_Temp, BED_MINTEMP, BED_MAX_TARGET);
       // Bed_Temp value
       DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(bed_line), HMI_ValueStruct.Bed_Temp);
     }
@@ -1733,7 +1723,7 @@ void HMI_ProbeYOffset(){
         return;
       }
       // Fan_speed limit
-      LIMIT(HMI_ValueStruct.Fan_speed, FANOFF, FANON);
+      LIMIT(HMI_ValueStruct.Fan_speed, 0, 255);
       // Fan_speed value
       DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(fan_line), HMI_ValueStruct.Fan_speed);
     }
@@ -1881,20 +1871,22 @@ void _draw_xyz_position(const bool force) {
 
 void update_variable() {
   #if HAS_HOTEND
-    static float _hotendtemp = 0;
-    const bool _new_hotend_temp = _hotendtemp != thermalManager.temp_hotend[0].celsius;
-    if (_new_hotend_temp) _hotendtemp = thermalManager.temp_hotend[0].celsius;
-    static int16_t _hotendtarget = 0;
-    const bool _new_hotend_target = _hotendtarget != thermalManager.temp_hotend[0].target;
-    if (_new_hotend_target) _hotendtarget = thermalManager.temp_hotend[0].target;
+    static celsius_t _hotendtemp = 0, _hotendtarget = 0;
+    const celsius_t hc = thermalManager.degHotend(0),
+                    ht = thermalManager.degTargetHotend(0);
+    const bool _new_hotend_temp = _hotendtemp != hc,
+               _new_hotend_target = _hotendtarget != ht;
+    if (_new_hotend_temp) _hotendtemp = hc;
+    if (_new_hotend_target) _hotendtarget = ht;
   #endif
   #if HAS_HEATED_BED
-    static float _bedtemp = 0;
-    const bool _new_bed_temp = _bedtemp != thermalManager.temp_bed.celsius;
-    if (_new_bed_temp) _bedtemp = thermalManager.temp_bed.celsius;
-    static int16_t _bedtarget = 0;
-    const bool _new_bed_target = _bedtarget != thermalManager.temp_bed.target;
-    if (_new_bed_target) _bedtarget = thermalManager.temp_bed.target;
+    static celsius_t _bedtemp = 0, _bedtarget = 0;
+    const celsius_t bc = thermalManager.degBed(),
+                    bt = thermalManager.degTargetBed();
+    const bool _new_bed_temp = _bedtemp != bc,
+               _new_bed_target = _bedtarget != bt;
+    if (_new_bed_temp) _bedtemp = bc;
+    if (_new_bed_target) _bedtarget = bt;
   #endif
   #if HAS_FAN
     static uint8_t _fanspeed = 0;
@@ -2177,9 +2169,9 @@ void Draw_Status_Area(const bool with_update) {
 
   #if HAS_HOTEND
     DWIN_ICON_Show(ICON, ICON_HotendTemp, 10, 383);
-    DWIN_Draw_IntValue(true, true, 0, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 3, 28, 384, thermalManager.temp_hotend[0].celsius);
+    DWIN_Draw_IntValue(true, true, 0, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 3, 28, 384, thermalManager.degHotend(0));
     DWIN_Draw_String(false, false, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 25 + 3 * STAT_CHR_W + 5, 384, F("/"));
-    DWIN_Draw_IntValue(true, true, 0, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 3, 25 + 4 * STAT_CHR_W + 6, 384, thermalManager.temp_hotend[0].target);
+    DWIN_Draw_IntValue(true, true, 0, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 3, 25 + 4 * STAT_CHR_W + 6, 384, thermalManager.degTargetHotend(0));
 
     DWIN_ICON_Show(ICON, ICON_StepE, 112, 417);
     DWIN_Draw_IntValue(true, true, 0, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 3, 116 + 2 * STAT_CHR_W, 417, planner.flow_percentage[0]);
@@ -2188,9 +2180,9 @@ void Draw_Status_Area(const bool with_update) {
 
   #if HAS_HEATED_BED
     DWIN_ICON_Show(ICON, ICON_BedTemp, 10, 416);
-    DWIN_Draw_IntValue(true, true, 0, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 3, 28, 417, thermalManager.temp_bed.celsius);
+    DWIN_Draw_IntValue(true, true, 0, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 3, 28, 417, thermalManager.degBed());
     DWIN_Draw_String(false, false, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 25 + 3 * STAT_CHR_W + 5, 417, F("/"));
-    DWIN_Draw_IntValue(true, true, 0, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 3, 25 + 4 * STAT_CHR_W + 6, 417, thermalManager.temp_bed.target);
+    DWIN_Draw_IntValue(true, true, 0, DWIN_FONT_STAT, Color_White, Color_Bg_Black, 3, 25 + 4 * STAT_CHR_W + 6, 417, thermalManager.degTargetBed());
   #endif
 
   DWIN_ICON_Show(ICON, ICON_Speed, 113, 383);
@@ -2450,11 +2442,11 @@ void HMI_SelectFile() {
 
       card.openAndPrintFile(card.filename);
 
-      #if FAN_COUNT > 0
+      #if HAS_FAN
         // All fans on for Ender 3 v2 ?
         // The slicer should manage this for us.
-        // for (uint8_t i = 0; i < FAN_COUNT; i++)
-        //  thermalManager.fan_speed[i] = FANON;
+        //for (uint8_t i = 0; i < FAN_COUNT; i++)
+        //  thermalManager.fan_speed[i] = 255;
       #endif
 
       //Start Printing
@@ -2966,11 +2958,11 @@ void Draw_Temperature_Menu() {
   #define _TMENU_ICON(N) Draw_Menu_Line(++i, ICON_SetEndTemp + (N) - 1)
   #if HAS_HOTEND
     _TMENU_ICON(TEMP_CASE_TEMP);
-    DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Color_Bg_Black, 3, 216, MBASE(i), thermalManager.temp_hotend[0].target);
+    DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Color_Bg_Black, 3, 216, MBASE(i), thermalManager.degTargetHotend(0));
   #endif
   #if HAS_HEATED_BED
     _TMENU_ICON(TEMP_CASE_BED);
-    DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Color_Bg_Black, 3, 216, MBASE(i), thermalManager.temp_bed.target);
+    DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Color_Bg_Black, 3, 216, MBASE(i), thermalManager.degTargetBed());
   #endif
   #if HAS_FAN
     _TMENU_ICON(TEMP_CASE_FAN);
@@ -3149,7 +3141,7 @@ void HMI_AxisMove() {
           case 4: // Extruder
             // window tips
             #ifdef PREVENT_COLD_EXTRUSION
-              if (thermalManager.temp_hotend[0].celsius < EXTRUDE_MINTEMP) {
+              if (thermalManager.degHotend(0) < EXTRUDE_MINTEMP) {
                 HMI_flag.ETempTooLow_flag = true;
                 Popup_Window_ETempTooLow();
                 DWIN_UpdateLCD();
@@ -3190,16 +3182,16 @@ void HMI_Temperature() {
       #if HAS_HOTEND
         case TEMP_CASE_TEMP: // Nozzle temperature
           checkkey = ETemp;
-          HMI_ValueStruct.E_Temp = thermalManager.temp_hotend[0].target;
-          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(1), thermalManager.temp_hotend[0].target);
+          HMI_ValueStruct.E_Temp = thermalManager.degTargetHotend(0);
+          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(1), HMI_ValueStruct.E_Temp);
           EncoderRate.enabled = true;
           break;
       #endif
       #if HAS_HEATED_BED
         case TEMP_CASE_BED: // Bed temperature
           checkkey = BedTemp;
-          HMI_ValueStruct.Bed_Temp = thermalManager.temp_bed.target;
-          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(2), thermalManager.temp_bed.target);
+          HMI_ValueStruct.Bed_Temp = thermalManager.degTargetBed();
+          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(2), HMI_ValueStruct.Bed_Temp);
           EncoderRate.enabled = true;
           break;
       #endif
@@ -3207,7 +3199,7 @@ void HMI_Temperature() {
         case TEMP_CASE_FAN: // Fan speed
           checkkey = FanSpeed;
           HMI_ValueStruct.Fan_speed = thermalManager.fan_speed[0];
-          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(3), thermalManager.fan_speed[0]);
+          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(3), HMI_ValueStruct.Fan_speed);
           EncoderRate.enabled = true;
           break;
       #endif
@@ -3239,7 +3231,7 @@ void HMI_Temperature() {
             #ifdef USE_STRING_HEADINGS
               Draw_Title("PLA Settings"); // TODO: GET_TEXT_F
             #else
-              DWIN_Frame_TitleCopy(1, 56, 16, 141, 28);                                             // "PLA Settings"
+              DWIN_Frame_TitleCopy(1, 56, 16, 141, 28);                                       // "PLA Settings"
             #endif
             #ifdef USE_STRING_TITLES
               DWIN_Draw_Label(MBASE(PREHEAT_CASE_TEMP), F("Nozzle Temp"));
@@ -3255,7 +3247,7 @@ void HMI_Temperature() {
             #else
               DWIN_Frame_AreaCopy(1, 157, 76, 181, 86, LBLX, MBASE(PREHEAT_CASE_TEMP));
               DWIN_Frame_AreaCopy(1, 197, 104, 238, 114, LBLX + 27, MBASE(PREHEAT_CASE_TEMP));
-              DWIN_Frame_AreaCopy(1, 1, 89, 83, 101, LBLX + 71, MBASE(PREHEAT_CASE_TEMP)); // PLA nozzle temp
+              DWIN_Frame_AreaCopy(1, 1, 89, 83, 101, LBLX + 71, MBASE(PREHEAT_CASE_TEMP));      // PLA nozzle temp
               #if HAS_HEATED_BED
                 DWIN_Frame_AreaCopy(1, 157, 76, 181, 86, LBLX, MBASE(PREHEAT_CASE_BED) + 3);
                 DWIN_Frame_AreaCopy(1, 240, 104, 264, 114, LBLX + 27, MBASE(PREHEAT_CASE_BED) + 3);
@@ -3266,7 +3258,7 @@ void HMI_Temperature() {
                 DWIN_Frame_AreaCopy(1, 0, 119, 64, 132, LBLX + 27, MBASE(PREHEAT_CASE_FAN));    // PLA fan speed
               #endif
               #if ENABLED(EEPROM_SETTINGS)
-                DWIN_Frame_AreaCopy(1, 97, 165, 229, 177, LBLX, MBASE(PREHEAT_CASE_SAVE));          // Save PLA configuration
+                DWIN_Frame_AreaCopy(1, 97, 165, 229, 177, LBLX, MBASE(PREHEAT_CASE_SAVE));      // Save PLA configuration
               #endif
             #endif
           }
@@ -4077,22 +4069,22 @@ void HMI_Tune() {
       case TUNE_CASE_SPEED: // Print speed
         checkkey = PrintSpeed;
         HMI_ValueStruct.print_speed = feedrate_percentage;
-        DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(TUNE_CASE_SPEED + MROWS - index_tune), feedrate_percentage);
+        DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(TUNE_CASE_SPEED + MROWS - index_tune), HMI_ValueStruct.print_speed);
         EncoderRate.enabled = true;
         break;
       #if HAS_HOTEND
         case TUNE_CASE_TEMP: // Nozzle temp
           checkkey = ETemp;
-          HMI_ValueStruct.E_Temp = thermalManager.temp_hotend[0].target;
-          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(TUNE_CASE_TEMP + MROWS - index_tune), thermalManager.temp_hotend[0].target);
+          HMI_ValueStruct.E_Temp = thermalManager.degTargetHotend(0);
+          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(TUNE_CASE_TEMP + MROWS - index_tune), HMI_ValueStruct.E_Temp);
           EncoderRate.enabled = true;
           break;
       #endif
       #if HAS_HEATED_BED
         case TUNE_CASE_BED: // Bed temp
           checkkey = BedTemp;
-          HMI_ValueStruct.Bed_Temp = thermalManager.temp_bed.target;
-          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(TUNE_CASE_BED + MROWS - index_tune), thermalManager.temp_bed.target);
+          HMI_ValueStruct.Bed_Temp = thermalManager.degTargetBed();
+          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(TUNE_CASE_BED + MROWS - index_tune), HMI_ValueStruct.Bed_Temp);
           EncoderRate.enabled = true;
           break;
       #endif
@@ -4100,7 +4092,7 @@ void HMI_Tune() {
         case TUNE_CASE_FAN: // Fan speed
           checkkey = FanSpeed;
           HMI_ValueStruct.Fan_speed = thermalManager.fan_speed[0];
-          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(TUNE_CASE_FAN + MROWS - index_tune), thermalManager.fan_speed[0]);
+          DWIN_Draw_IntValue(true, true, 0, font8x16, Color_White, Select_Color, 3, 216, MBASE(TUNE_CASE_FAN + MROWS - index_tune), HMI_ValueStruct.Fan_speed);
           EncoderRate.enabled = true;
           break;
       #endif
@@ -4419,8 +4411,8 @@ void EachMomentUpdate() {
   if (HMI_flag.pause_action && printingIsPaused() && !planner.has_blocks_queued()) {
     HMI_flag.pause_action = false;
     #if ENABLED(PAUSE_HEAT)
-      TERN_(HAS_HOTEND, resume_hotend_temp = thermalManager.temp_hotend[0].target);
-      TERN_(HAS_HEATED_BED, resume_bed_temp = thermalManager.temp_bed.target);
+      TERN_(HAS_HOTEND, resume_hotend_temp = thermalManager.degTargetHotend(0));
+      TERN_(HAS_HEATED_BED, resume_bed_temp = thermalManager.degTargetBed());
       thermalManager.disable_all_heaters();
     #endif
     queue.inject_P(PSTR("G1 F1200 X0 Y0"));
@@ -4602,6 +4594,13 @@ void DWIN_CompletedHoming() {
 
 void DWIN_CompletedLeveling() {
   if (checkkey == Leveling) Goto_MainMenu();
+}
+
+void DWIN_StatusChanged(const char *text) {
+  DWIN_Draw_Rectangle(1, Color_Bg_Blue, 0, STATUS_Y, DWIN_WIDTH, STATUS_Y + 20);
+  const int8_t x = _MAX(0U, DWIN_WIDTH - strlen_P(text) * MENU_CHR_W) / 2;
+  DWIN_Draw_String(false, false, font8x16, Color_White, Color_Bg_Blue, x, STATUS_Y + 2, F(text));
+  DWIN_UpdateLCD();
 }
 
 #endif // DWIN_CREALITY_LCD
