@@ -45,14 +45,10 @@ enum processID : uint8_t {
   Prepare,
   Control,
   Leveling,
-  AUX,
-  Refuel,
-  ZTool,
   PrintProcess,
   AxisMove,
   TemperatureID,
   Motion,
-  Advanced,
   Info,
   Tune,
   #if HAS_PREHEAT
@@ -89,22 +85,11 @@ enum processID : uint8_t {
   Move_X,
   Move_Y,
   Move_Z,
-  Move1,
-  Move2,
-  Move3,
-  Move4,
-  Move5,
-  Homeoffset,
-  HomeoffsetRT,
-  ProbeYOffset,
-  ProbeXOffset,
-  AutoPIDTune,
-  RunoutDistance,
   #if HAS_HOTEND
     Extruder,
-    Extruder_Refuel,
     ETemp,
   #endif
+  Homeoffset,
   #if HAS_HEATED_BED
     BedTemp,
   #endif
@@ -262,7 +247,6 @@ enum processID : uint8_t {
 #define Percent_Color     0xFE29  // Percentage color
 #define BarFill_Color     0x10E4  // Fill color of progress bar
 #define Select_Color      0x33BB  // Selected color
-#define Check_Color       0x4E5C  // Check-box check color
 
 extern uint8_t checkkey;
 extern float zprobe_zoffset;
@@ -292,8 +276,6 @@ typedef struct {
     float Move_E_scaled   = 0;
   #endif
   float offset_value      = 0;
-  float float_value      = 0;
-  int16_t integer_value      = 0;
   int8_t show_mode        = 0; // -1: Temperature control    0: Printing temperature
   float Home_OffX_scaled  = 0;
   float Home_OffY_scaled  = 0;
@@ -349,9 +331,7 @@ void ICON_Stop(bool show);
 
 void Popup_Window_Resume();
 void Popup_Window_Home(const bool parking=false);
-void Popup_Window_Aux(void);
 void Popup_Window_Leveling();
-void Popup_Window_AutoPIDTuning();
 
 void Goto_PrintProcess();
 void Goto_MainMenu();
@@ -363,7 +343,6 @@ void HMI_Move_Z();
 void HMI_Move_E();
 
 void HMI_Zoffset();
-void HMI_ZoffsetRT();
 
 #if HAS_HOTEND
   void HMI_ETemp();
@@ -407,7 +386,6 @@ void HMI_Leveling();    // Level the page
 void HMI_AxisMove();    // Axis movement menu
 void HMI_Temperature(); // Temperature menu
 void HMI_Motion();      // Sports menu
-void HMI_Advanced();      // Advanced menu
 void HMI_Info();        // Information menu
 void HMI_Tune();        // Adjust the menu
 
@@ -429,13 +407,6 @@ void DWIN_StatusChanged(const char *text);
 void DWIN_Draw_Checkbox(uint16_t color, uint16_t bcolor, uint16_t x, uint16_t y, bool mode /* = false*/);
 
 inline void DWIN_StartHoming() { HMI_flag.home_flag = true; }
-inline void Draw_Checkbox(uint8_t row, bool value);
-inline void Draw_Float(float value, uint8_t row, bool selected=false, uint8_t minunit=10);
-inline void Draw_Menu_Item(uint8_t row, uint8_t icon=0, char *label1=NULL, char *label2=NULL, bool more=false, bool centered=false);
 
 void DWIN_CompletedHoming();
 void DWIN_CompletedLeveling();
-
-void Print_Status_Message(char * const text);
-void Print_Progress_Update(uint8_t percent, uint32_t remaining);
-void Update_Status_Bar();
