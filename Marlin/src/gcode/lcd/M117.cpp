@@ -20,6 +20,10 @@
  *
  */
 
+#include "../../inc/MarlinConfig.h"
+
+#if HAS_STATUS_MESSAGE
+
 #include "../gcode.h"
 #include "../../lcd/marlinui.h"
 
@@ -29,26 +33,6 @@
 
 #if ENABLED(DWIN_CREALITY_LCD)
 
-  #include "../../lcd/dwin/e3v2/dwin.h"
+}
 
-  void GcodeSuite::M117() {
-
-    if (parser.string_arg && parser.string_arg[0])
-      Print_Status_Message(parser.string_arg);
-    else
-      Print_Status_Message((char*)"");
-
-  }
-
-#else
-
-  void GcodeSuite::M117() {
-
-    if (parser.string_arg && parser.string_arg[0])
-      ui.set_status(parser.string_arg);
-    else
-      ui.reset_status();
-
-  }
-
-#endif
+#endif // HAS_STATUS_MESSAGE
